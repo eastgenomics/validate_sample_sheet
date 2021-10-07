@@ -33,8 +33,9 @@ class validators():
             'index': [],
             'index2': []
         }
-        self.samplesheet_header = samplesheet[0]
-        self.samplesheet_body = samplesheet[1]
+        self.samplesheet_body = samplesheet[0]
+        self.samplesheet_header = samplesheet[1]
+        self.header_count = samplesheet[2] + 1
         self.regex_patterns = regex_patterns
 
         if isinstance(self.regex_patterns, str):
@@ -113,30 +114,35 @@ class validators():
 
         column_vals = self.samplesheet_body[column].tolist()
 
-        # check for any none alphanumeric or -/_ characters
-        invalid_chars = set([
-            val for val in column_vals if not all(c in valid_chars for c in val)
-        ])
+        for row, name in enumerate(column_vals):
+            if not isinstance(name, str):
+                # not a string, may be float -> nan value -> empty cell
+                self.errors[column].append((
+                    f'{column} in row {self.header_count + row} is missing / '
+                    f'invalid: ({name})'
+                ))
+                continue
 
-        if invalid_chars:
-            for i in invalid_chars:
-                self.errors[column].append(
-                    f'Invalid characters in sample: {i}'
-                )
+            if not all(c in valid_chars for c in name):
+                # check for any none alphanumeric or -/_ characters
+                self.errors[column].append((
+                    f'Invalid characters in sample: {name} in row '
+                    f'{self.header_count + row}'
+                ))
+
+            # check name/id is not too long
+            if len(name) > 100:
+                self.errors[column].append((
+                    f'{column} invalid (> 100 characters) in row '
+                    f'{self.header_count + row}: {name} '
+                ))
 
         # check for duplicate samples
         duplicates = set([x for x in column_vals if column_vals.count(x) > 1])
 
         if duplicates:
             for dup in duplicates:
-                self.errors[column].append(f'Duplicate sample present: {dup}')
-
-        if column == 'Sample_ID':
-            for val in column_vals:
-                if len(val) > 100:
-                    self.errors[column].append(
-                        f'Invalid sample ID (> 100 characters): {val}'
-                    )
+                self.errors[column].append(f'Duplicate sample present: {dup}')         
 
 
     def sample_id(self) -> None:
@@ -149,12 +155,15 @@ class validators():
         # if given, use regex patterns to validate sample ids against
         if self.regex_patterns:
             sample_ids = self.samplesheet_body['Sample_ID'].tolist()
-            print(self.regex_patterns)
+
             # compile all regex upfront to make searching faster
             regex_patterns = [re.compile(x) for x in self.regex_patterns]
 
             for sample in sample_ids:
                 # for each sample, try each regex to find a match
+                if not isinstance(sample, str):
+                    continue
+
                 for pattern in regex_patterns:
                     match = re.search(pattern, sample)
 
@@ -207,25 +216,23 @@ class validators():
         """
         indices = self.samplesheet_body[index_column].tolist()
 
-        invalid_chars = [
-            x for x in indices if not all(c in 'ATCG' for c in x)
-        ]
-
-        duplicates = duplicates = set([
-            x for x in indices if indices.count(x) > 1
-        ])
-
         if '2' not in index_column:
             # set key for adding messages to errors dict
             index_key = 'index'
         else:
             index_key = 'index2'
 
-        if invalid_chars:
-            for i in invalid_chars:
-                self.errors[index_key].append(
-                    f'Invalid characters found in index: {i}'
-                )
+        for row, index in enumerate(indices):
+            if not all(c in 'ATCG' for c in index):
+                # check for invalid characters
+                self.errors[index_key].append((
+                    f'Invalid characters found in index: {index} at row '
+                    f'{self.header_count + row}'
+                ))
+
+        duplicates = duplicates = set([
+            x for x in indices if indices.count(x) > 1
+        ])
 
         if duplicates:
             for i in duplicates:
@@ -265,14 +272,17 @@ def read_sheet(file) -> tuple:
                 samplesheet_header.append(line.rstrip())
                 break
 
+        # used to return what row issues are on when looping over data body
+        header_count = count + 1
+
     samplesheet_df = pd.read_csv(
-        file, skiprows=count + 1, names=[
+        file, skiprows=header_count, names=[
             'Sample_ID', 'Sample_Name', 'Sample_Plate', 'Sample_Well',
             'Index_Plate_Well', 'index', 'index2'
         ]
     )
 
-    return (samplesheet_header, samplesheet_df)
+    return (samplesheet_df, samplesheet_header, header_count)
 
 
 def read_name_patterns(config_file):
@@ -303,7 +313,7 @@ def parse_args():
         help="sample sheet to validate"
     )
     parser.add_argument(
-        '--name_patterns', nargs='+', required=False,
+        '--name_patterns', nargs='*', action="store", required=False,
         help='regex pattern(s) against which to validate sample names'
     )
     parser.add_argument(
