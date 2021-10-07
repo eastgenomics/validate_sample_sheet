@@ -55,7 +55,8 @@ either as strings at the cmd line (`--name_patterns pattern1 pattern2`) or in a 
 n.b. if passing patterns at the cmd line these must be quoted to stop shell expansion.
 
 ```
-$ python validate/validate.py --samplesheet ~/Downloads/MYE0029_30092021_SampleSheet\ \(1\).csv --name_patterns "[0-9]{7}-[A-Z0-9]*-[A-Z]{2}-[A-Z]{3,4}-MYE-[MF]-EGG2"
+$ python validate/validate.py --samplesheet ~/Downloads/MYE0029_30092021_SampleSheet\ \(1\).csv 
+--name_patterns "[0-9]{7}-[A-Z0-9]*-[A-Za-z0-9-\(\)]*-MYE-[MF]-EGG2"
 
 Errors found in index:
 
