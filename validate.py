@@ -38,10 +38,6 @@ class validators():
         """
         header_errors = []
 
-        for l in self.samplesheet_header:
-            print(l)
-
-
         for num, line in enumerate(self.samplesheet_header):
             # check each line of header for specific matches
             print(num)
@@ -230,7 +226,7 @@ def read(file) -> tuple:
     with open(file) as f:
         # read in header of file, column names should always start with Sample_
         samplesheet_header = []
-        for line in f.readlines():
+        for count, line in enumerate(f.readlines()):
             if not line.startswith('Sample_'):
                 samplesheet_header.append(line.rstrip())
             else:
@@ -239,7 +235,7 @@ def read(file) -> tuple:
                 break
 
     samplesheet_df = pd.read_csv(
-        file, skiprows=21, names=[
+        file, skiprows=count, names=[
             'Sample_ID', 'Sample_Name', 'Sample_Plate', 'Sample_Well',
             'Index_Plate_Well', 'index', 'index2'
         ]
@@ -275,7 +271,6 @@ def main():
 
     sample_sheet = read(args.samplesheet)
     errors = validate_sheet(sample_sheet)
-
 
     if not all(x == [] for x in errors.values()):
         # found some errors => print
