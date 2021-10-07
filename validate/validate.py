@@ -7,14 +7,10 @@ ensure sample naming conforms to requirements.
 Jethro Rainford 211007
 """
 import argparse
-from pprint import PrettyPrinter
 import re
 import string
-import sys
 
 import pandas as pd
-
-PPRINT = PrettyPrinter(indent=4).pprint
 
 
 class validators():
