@@ -19,7 +19,8 @@ PPRINT = PrettyPrinter(indent=4).pprint
 
 class validators():
     """
-
+    Functions to validate each part of sample sheet.
+    self.errors is dict used to store any errors found to return / print
     """
     def __init__(self, samplesheet, regex_patterns) -> None:
         self.errors = {
