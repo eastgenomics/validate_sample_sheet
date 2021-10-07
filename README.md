@@ -36,7 +36,20 @@ The following Python packages are required:
 
 The only required input to be passed is the path to a sample sheet:
 ```
+# sample sheet with no errors
+$ python validate/validate.py --samplesheet Samplesheet.csv
+
+Checking samplesheet for issues
+
+SUCCESS: Samplesheet has passed validation.
+
+
+
+# sample sheet with errors
+
 $ python validate/validate.py --samplesheet SampleSheet.csv
+
+Checking samplesheet for issues
 
 Errors found in Sample_ID:
 
