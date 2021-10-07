@@ -333,6 +333,8 @@ def main():
     if args.name_patterns:
         regex_patterns = args.name_patterns
 
+    print(f'\nChecking samplesheet for issues')
+
     errors = validate_sheet(args.samplesheet, regex_patterns)
 
     if not all(x == [] for x in errors.values()):
@@ -341,6 +343,8 @@ def main():
             if val:
                 print(f'\n\nErrors found in {key}:\n')
                 [print(f'\t{x}') for x in val]
+    else:
+        print(f'\nSUCCESS: Samplesheet has passed validation.\n')
 
 
 if __name__ == "__main__":
