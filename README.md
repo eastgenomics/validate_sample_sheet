@@ -8,7 +8,7 @@ Currently validated fields include:
     - Check first line is `[Header]`.
     - Check last line is `[Data]`.
     - Check adapters contain only `ATCG`.
-    - Check read(s) are avlid integers.
+    - Check read(s) are valid integers.
     - Check investigator and experiment name set.
 
 </br>
