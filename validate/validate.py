@@ -1,10 +1,14 @@
 """
 Validate Illumina sample sheet against defined requirements.
+Currently checks header, sample IDs/names and indices for valid values.
+Can also accept a list/file of regex patterns to check sample IDs against to
+ensure sample naming conforms to requirements.
 
 Jethro Rainford 211007
 """
 import argparse
 from pprint import PrettyPrinter
+import re
 import string
 import sys
 
@@ -17,7 +21,7 @@ class validators():
     """
 
     """
-    def __init__(self, samplesheet) -> None:
+    def __init__(self, samplesheet, regex_patterns) -> None:
         self.errors = {
             'header': [],
             'Sample_ID': [],
@@ -30,7 +34,11 @@ class validators():
         }
         self.samplesheet_header = samplesheet[0]
         self.samplesheet_body = samplesheet[1]
+        self.regex_patterns = regex_patterns
 
+        if isinstance(self.regex_patterns, str):
+            # pattern is string and not list, probably passed just one
+            self.regex_patterns = [self.regex_patterns]
 
     def header(self) -> None:
         """
@@ -40,7 +48,6 @@ class validators():
 
         for num, line in enumerate(self.samplesheet_header):
             # check each line of header for specific matches
-            print(num)
             if num == 0:
                 if not line.startswith('[Header]'):
                     # first line should always be [Header]
@@ -138,6 +145,28 @@ class validators():
         # checks for duplicates and invalid characters
         self.check_name_or_id('Sample_ID')
 
+        # if given, use regex patterns to validate sample ids against
+        if self.regex_patterns:
+            sample_ids = self.samplesheet_body['Sample_ID'].tolist()
+            print(self.regex_patterns)
+            # compile all regex upfront to make searching faster
+            regex_patterns = [re.compile(x) for x in self.regex_patterns]
+
+            for sample in sample_ids:
+                # for each sample, try each regex to find a match
+                for pattern in regex_patterns:
+                    match = re.search(pattern, sample)
+
+                    if match:
+                        break
+                if not match:
+                    # no matches found in given patterns
+                    self.errors['Sample_ID'].append((
+                        f'Sample ID {sample} is invalid, please ensure it '
+                        'conforms to the expected format for the given sample '
+                        'assay'
+                    ))
+
 
     def sample_name(self) -> None:
         """
@@ -204,12 +233,13 @@ class validators():
                 )
 
 
-def validate_sheet(sample_sheet) -> dict:
+def validate_sheet(sample_sheet, regex_patterns=None) -> dict:
     """
     Call all functions to validate sample sheet, validate.errors dict will
     be populated with errors if found
     """
-    validate = validators(sample_sheet)
+    sample_sheet = read_sheet(sample_sheet)
+    validate = validators(sample_sheet, regex_patterns)
 
     validate.header()
     validate.sample_id()
@@ -219,7 +249,7 @@ def validate_sheet(sample_sheet) -> dict:
     return validate.errors
 
 
-def read(file) -> tuple:
+def read_sheet(file) -> tuple:
     """
     Read header and body of samplesheet into df, returned in a tuple
     """
@@ -235,7 +265,7 @@ def read(file) -> tuple:
                 break
 
     samplesheet_df = pd.read_csv(
-        file, skiprows=count, names=[
+        file, skiprows=count + 1, names=[
             'Sample_ID', 'Sample_Name', 'Sample_Plate', 'Sample_Well',
             'Index_Plate_Well', 'index', 'index2'
         ]
@@ -244,12 +274,27 @@ def read(file) -> tuple:
     return (samplesheet_header, samplesheet_df)
 
 
+def read_name_patterns(config_file):
+    """
+    Read regex patterns used for validating sample names from file
+    """
+    with open(config_file) as f:
+        regex_patterns = [x.rstrip() for x in f.readlines()]
+
+    return regex_patterns
+
+
 def parse_args():
     """
     Parse cmd line arguments
     """
     parser = argparse.ArgumentParser(
-        description="Validate Illumina sample sheet against defined requirements"
+        description=(
+            "Validate Illumina sample sheet against defined requirements. "
+            "Requires passing a samplesheet, and optionally a list or file of "
+            "regex patterns to validate sample IDs against. "
+            "See readme for details."
+        )
     )
 
     parser.add_argument(
@@ -257,8 +302,12 @@ def parse_args():
         help="sample sheet to validate"
     )
     parser.add_argument(
-        '--name', required=False,
-        help='regex pattern(s) against whicheah to validate sample name'
+        '--name_patterns', nargs='+', required=False,
+        help='regex pattern(s) against which to validate sample names'
+    )
+    parser.add_argument(
+        '--name_patterns_file', required=False,
+        help='file of regex pattern(s) against which to validate sameple names'
     )
 
     args = parser.parse_args()
@@ -269,8 +318,15 @@ def parse_args():
 def main():
     args = parse_args()
 
-    sample_sheet = read(args.samplesheet)
-    errors = validate_sheet(sample_sheet)
+    regex_patterns = None
+
+    if args.name_patterns_file:
+        regex_patterns = read_name_patterns(args.name_patterns_file)
+
+    if args.name_patterns:
+        regex_patterns = args.name_patterns
+
+    errors = validate_sheet(args.samplesheet, regex_patterns)
 
     if not all(x == [] for x in errors.values()):
         # found some errors => print
