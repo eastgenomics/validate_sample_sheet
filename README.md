@@ -65,10 +65,11 @@ Errors found in index:
 Regex patterns for checking sample IDs are valid against a required specification may be passed
 either as strings at the cmd line (`--name_patterns pattern1 pattern2`) or in a file 
 (`--name_patterns_file sample_patterns.txt`).
+
 n.b. if passing patterns at the cmd line these must be quoted to stop shell expansion.
 
 ```
-$ python validate/validate.py --samplesheet ~/Downloads/MYE0029_30092021_SampleSheet\ \(1\).csv 
+$ python validate/validate.py --samplesheet SampleSheet.csv 
 --name_patterns "[0-9]{7}-[A-Z0-9]*-[A-Za-z0-9-\(\)]*-MYE-[MF]-EGG2"
 
 Errors found in index:
