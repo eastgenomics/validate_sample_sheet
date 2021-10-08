@@ -18,25 +18,24 @@ class validators():
     Functions to validate each part of sample sheet.
     self.errors is dict used to store any errors found to return / print
     """
-    def __init__(self, samplesheet, regex_patterns) -> None:
+    def __init__(self, samplesheet, regex_patterns=None) -> None:
         self.errors = {
             'header': [],
             'Sample_ID': [],
             'Sample_Name': [],
-            'Sample_Plate': [],
-            'Sample_Well': [],
-            'Index_Plate_Well': [],
             'index': [],
             'index2': []
         }
         self.samplesheet_body = samplesheet[0]
         self.samplesheet_header = samplesheet[1]
+        print(samplesheet[2])
         self.header_count = samplesheet[2] + 1
         self.regex_patterns = regex_patterns
 
         if isinstance(self.regex_patterns, str):
             # pattern is string and not list, probably passed just one
             self.regex_patterns = [self.regex_patterns]
+
 
     def header(self) -> None:
         """
@@ -137,8 +136,9 @@ class validators():
         duplicates = set([x for x in column_vals if column_vals.count(x) > 1])
 
         if duplicates:
+            col = column.replace("_", " ")  # format nice for error message
             for dup in duplicates:
-                self.errors[column].append(f'Duplicate sample present: {dup}')         
+                self.errors[column].append(f'Duplicate {col} present: {dup}')         
 
 
     def sample_id(self) -> None:
