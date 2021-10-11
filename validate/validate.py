@@ -1,8 +1,10 @@
 """
 Validate Illumina sample sheet against defined requirements.
+
 Currently checks header, sample IDs/names and indices for valid values.
 Can also accept a list/file of regex patterns to check sample IDs against to
 ensure sample naming conforms to requirements.
+See readme for full details on what is checked.
 
 Jethro Rainford 211007
 """
@@ -19,6 +21,7 @@ class validators():
     self.errors is dict used to store any errors found to return / print
     """
     def __init__(self, samplesheet, regex_patterns=None) -> None:
+        # self.errors is dict to add errors from each section to
         self.errors = {
             'header': [],
             'Sample_ID': [],
@@ -28,7 +31,6 @@ class validators():
         }
         self.samplesheet_body = samplesheet[0]
         self.samplesheet_header = samplesheet[1]
-        print(samplesheet[2])
         self.header_count = samplesheet[2] + 1
         self.regex_patterns = regex_patterns
 
@@ -40,6 +42,12 @@ class validators():
     def header(self) -> None:
         """
         Validate header against:
+        - first line being [Header]
+        - having Investigator and Experiment names set
+        - Valid value for reads
+        - Last line of header is [Data]
+        - Column names begin with Sample_ID Sample_Name, all others are
+            variable
         """
         header_errors = []
 
@@ -143,7 +151,8 @@ class validators():
 
     def sample_id(self) -> None:
         """
-        Validate sample id against:
+        Validate sample id with check_name_or_id() and uses regex checks
+        if regex patterns defined
         """
         # checks for duplicates and invalid characters
         self.check_name_or_id('Sample_ID')
@@ -241,6 +250,14 @@ def validate_sheet(sample_sheet, regex_patterns=None) -> dict:
     """
     Call all functions to validate sample sheet, validate.errors dict will
     be populated with errors if found
+    Args:
+        - sample_sheet (tuple): contains df of samplesheet data (df), sample
+            sheet header (list) and header_count (int)
+        - regex_patterns (list): (optional) list of regex patterns to validate
+            Sample_ID against for valid sample naming
+    Returns:
+        - errors (dict): dictionary of errors found in samplesheet, if none
+            found will be a dict of keys with empty values
     """
     sample_sheet = read_sheet(sample_sheet)
     validate = validators(sample_sheet, regex_patterns)
@@ -256,6 +273,12 @@ def validate_sheet(sample_sheet, regex_patterns=None) -> dict:
 def read_sheet(file) -> tuple:
     """
     Read header and body of samplesheet into df, returned in a tuple
+
+    Args:
+        - file (str): name of samplesheet file to validate
+    Returns:
+        - sample_sheet (tuple): contains df of samplesheet data (df), sample
+            sheet header (list) and header_count (int)
     """
     with open(file) as f:
         # read in header of file, column names should always start with Sample_
@@ -283,7 +306,12 @@ def read_sheet(file) -> tuple:
 
 def read_name_patterns(config_file):
     """
-    Read regex patterns used for validating sample names from file
+    Read regex patterns used for validating sample IDs from file
+
+    Args:
+        - config_file (str): filename of config file containing regex patterns
+    Returns:
+        regex_patterns (list): list of patterns read from file
     """
     with open(config_file) as f:
         regex_patterns = [x.rstrip() for x in f.readlines()]
@@ -328,13 +356,16 @@ def main():
     regex_patterns = None
 
     if args.name_patterns_file:
+        # regex patterns given in file, read to list
         regex_patterns = read_name_patterns(args.name_patterns_file)
 
     if args.name_patterns:
+        # regex patterns passed in cmd line arg
         regex_patterns = args.name_patterns
 
     print(f'\nChecking samplesheet for issues')
 
+    # run validation
     errors = validate_sheet(args.samplesheet, regex_patterns)
 
     if not all(x == [] for x in errors.values()):
