@@ -15,6 +15,7 @@ Errors introduced and covered by tests:
     line above)
 - Check for invalid characters in sample ID (added a space to id of sample 1)
 - Check for invalid characters in sample name (added tilde to name of sample 1)
+- Check for missing sample ID / name (deleted both from line 30)
 - Check using regex sample id is conforms to specified pattern (regex below,
     added '_' in place of first '-')
 - Check for duplicate sample ID and sample name (duplicated last 2 of both)
