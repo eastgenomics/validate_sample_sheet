@@ -21,6 +21,7 @@ Errors introduced and covered by tests:
 
 """
 import os
+from pathlib import Path
 import sys
 
 import pandas as pd
@@ -32,7 +33,7 @@ from validate.validate import validate_sheet, validators, read_sheet
 
 
 # test sample sheet with known errors
-test_sample_sheet = 'testSampleSheet.csv'
+test_sample_sheet = f'{Path(__file__).parent.resolve()}/testSampleSheet.csv'
 
 # example regex pattern for given test samplesheet
 regex_pattern = "[0-9]{7}-[A-Z0-9]*-[A-Za-z0-9-()]*-MYE-[MF]-EGG2"
@@ -167,6 +168,24 @@ def test_id_regex_check():
         "Sample ID 2107909_21251Z0094-BM-MPD-MYE-F-EGG2 is invalid, please "
         "ensure it conforms to the expected format for the given sample assay"
     ) in errors["Sample_ID"]
+
+
+def test_missing_id():
+    """
+    Check for catching missing sample id
+    """
+    assert (
+        "Sample_ID in row 30 is missing / invalid: (nan)"
+    ) in errors["Sample_ID"]
+
+
+def test_missing_name():
+    """
+    Check for catching missing sample name
+    """
+    assert (
+        "Sample_Name in row 30 is missing / invalid: (nan)"
+    ) in errors["Sample_Name"]
 
 
 def test_duplicate_id():

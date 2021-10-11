@@ -118,8 +118,8 @@ class validators():
         column_vals = self.samplesheet_body[column].tolist()
 
         for row, name in enumerate(column_vals):
-            if not isinstance(name, str):
-                # not a string, may be float -> nan value -> empty cell
+            if isinstance(name, float):
+                # float -> nan value -> empty cell
                 self.errors[column].append((
                     f'{column} in row {self.header_count + row} is missing / '
                     f'invalid: ({name})'
@@ -164,15 +164,17 @@ class validators():
             # compile all regex upfront to make searching faster
             regex_patterns = [re.compile(x) for x in self.regex_patterns]
 
-            for sample in sample_ids:
+            for idx, sample in enumerate(sample_ids):
                 # for each sample, try each regex to find a match
-                if not isinstance(sample, str):
+                if isinstance(sample, float):
+                    # float value => empty,
+                    # already caught in check_name_or_id() so continue here
                     continue
 
                 for pattern in regex_patterns:
                     match = re.search(pattern, sample)
-
                     if match:
+                        # found match => stop checking current sample
                         break
                 if not match:
                     # no matches found in given patterns
