@@ -82,7 +82,7 @@ class validators():
                         f'{self.samplesheet_header[num + 1].strip(",")}'
                     ))
 
-            if line.startswith('Adapter'):
+            if line.startswith('Adapter,'):
                 # check given adaptor sequence(s) are valid
                 if not all(c in 'ATCGatcg-' for c in line.split(',')[1]):
                     header_errors.append((
@@ -97,14 +97,6 @@ class validators():
                         f'Error in line {num + 1}: the first cell should contain [Data]'
                     )
 
-            if num == len(self.samplesheet_header) - 1:
-                # final line should column names
-                if not line.startswith('Sample_ID,Sample_Name'):
-                    header_errors.append((
-                        f'Error in line {num + 1}: invalid column names given. '
-                        'Sample_ID and Sample_Name must be the first 2 columns'
-                    ))
-
         if header_errors:
             self.errors['header'].extend(header_errors)
 
@@ -114,6 +106,21 @@ class validators():
         Checks both Sample_Name and Sample_ID columns for valid names
         """
         valid_chars = string.ascii_letters + string.digits + '_' + '-'
+
+        if column == 'Sample_Name':
+            if column not in self.samplesheet_body.columns:
+                # Sample_Name not required => may not be present
+                print(f'{column} not in columns, skipping check')
+                return
+
+            if all(self.samplesheet_body[column].isnull()):
+                # column name specified but no values entered, not required
+                # so print message and continue witout validation errors
+                print((
+                    'Sample_Name column present but no sample names given, '
+                    'continuing...'
+                ))
+                return
 
         column_vals = self.samplesheet_body[column].tolist()
 
@@ -286,21 +293,19 @@ def read_sheet(file) -> tuple:
         # read in header of file, column names should always start with Sample_
         samplesheet_header = []
         for count, line in enumerate(f.readlines()):
-            if not line.startswith('Sample_'):
+            if 'Sample_ID' not in line:
                 samplesheet_header.append(line.rstrip())
             else:
-                # read in column names and stop
+                # Sample_ID present => line is column names
                 samplesheet_header.append(line.rstrip())
+                column_names = line.split(',')
                 break
 
         # used to return what row issues are on when looping over data body
         header_count = count + 1
 
     samplesheet_df = pd.read_csv(
-        file, skiprows=header_count, names=[
-            'Sample_ID', 'Sample_Name', 'Sample_Plate', 'Sample_Well',
-            'Index_Plate_Well', 'index', 'index2'
-        ]
+        file, skiprows=header_count, names=column_names
     )
 
     return (samplesheet_df, samplesheet_header, header_count)
@@ -365,7 +370,7 @@ def main():
         # regex patterns passed in cmd line arg
         regex_patterns = args.name_patterns
 
-    print(f'\nChecking samplesheet for issues')
+    print(f'\nChecking samplesheet for issues\n')
 
     # run validation
     errors = validate_sheet(args.samplesheet, regex_patterns)
