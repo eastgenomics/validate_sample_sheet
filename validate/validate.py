@@ -11,6 +11,7 @@ Jethro Rainford 211007
 import argparse
 import re
 import string
+import sys
 
 import pandas as pd
 
@@ -51,6 +52,10 @@ class validators():
         """
         header_errors = []
 
+        # regex to match adapter lines as they can be Adapter, Adap6ter1,
+        # AdapterRead1 etc.
+        adapter_regex = re.compile("^adapter(read)?[1,2]?", re.IGNORECASE)
+
         for num, line in enumerate(self.samplesheet_header):
             # check each line of header for specific matches
             if num == 0:
@@ -82,7 +87,7 @@ class validators():
                         f'{self.samplesheet_header[num + 1].strip(",")}'
                     ))
 
-            if line.startswith('Adapter,'):
+            if re.search(adapter_regex, line):
                 # check given adaptor sequence(s) are valid
                 if not all(c in 'ATCGatcg-' for c in line.split(',')[1]):
                     header_errors.append((
@@ -147,13 +152,50 @@ class validators():
                     f'{self.header_count + row}: {name} '
                 ))
 
+
+    def check_duplicate_ids(self):
+        """
+        Check for duplicate sample_ids, they are allowed if either they are on
+        different lanes OR the same lane with different indices
+        """
+        sample_ids = self.samplesheet_body['Sample_ID'].tolist()
+
         # check for duplicate samples
-        duplicates = set([x for x in column_vals if column_vals.count(x) > 1])
+        duplicates = list(set(
+            [x for x in sample_ids if sample_ids.count(x) > 1]
+        ))
 
         if duplicates:
-            col = column.replace("_", " ")  # format nice for error message
+            # found duplicates, check if in different lanes and/or have
+            # different indices
             for dup in duplicates:
-                self.errors[column].append(f'Duplicate {col} present: {dup}')         
+                # get rows containing duplicate sample IDs
+                dup_rows = self.samplesheet_body[
+                    self.samplesheet_body['Sample_ID'] == dup
+                ]
+
+                # dropping everything except for lane (if present) and index
+                # then checking if rows are unique
+                check_columns = ['Sample_ID', 'lane', 'Lane', 'index', 'Index']
+
+                for df_col in dup_rows.columns:
+                    if df_col not in check_columns:
+                        # remove all unneeded columns
+                        dup_rows = dup_rows.drop(columns=[df_col])
+
+                total_rows = len(dup_rows.index)
+
+                dup_rows = dup_rows.drop_duplicates(ignore_index=True)
+
+                unique_rows = len(dup_rows.index)
+
+                if total_rows > unique_rows:
+                    # if we're here that means we have more than one sample id
+                    # with the same lane and / or index which is probably wrong
+                    self.errors['Sample_ID'].append(
+                        f'Duplicate sample ID found in same lane and / or with '
+                        f'same indices: {dup}'
+                    )
 
 
     def sample_id(self) -> None:
@@ -161,8 +203,11 @@ class validators():
         Validate sample id with check_name_or_id() and uses regex checks
         if regex patterns defined
         """
-        # checks for duplicates and invalid characters
+        # checks for invalid characters
         self.check_name_or_id('Sample_ID')
+
+        # checks for duplicate IDs
+        self.check_duplicate_ids()
 
         # if given, use regex patterns to validate sample ids against
         if self.regex_patterns:
@@ -207,8 +252,8 @@ class validators():
         columns = self.samplesheet_body.columns.tolist()
 
         # find index columns
-        index1 = [x for x in columns if x == 'index' or x == 'Index']
-        index2 = [x for x in columns if x == 'index2' or x == 'Index2']
+        index1 = [x for x in columns if x.strip('\n') == 'index' or x == 'Index']
+        index2 = [x for x in columns if x.strip('\n') == 'index2' or x == 'Index2']
 
         if index1:
             self.check_index(index1[0])
@@ -358,6 +403,10 @@ def parse_args():
 
 
 def main():
+    # turns off chained assignment warning - not req. as
+    # intentionally writing back to df
+    # pd.options.mode.chained_assignment = None
+
     args = parse_args()
 
     regex_patterns = None

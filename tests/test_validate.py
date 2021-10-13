@@ -193,15 +193,7 @@ def test_duplicate_id():
     """
     Check for duplicated sample ids
     """
-    assert (
-        "Duplicate Sample ID present: 2107383-21236Z0079-BM-MPD-MYE-F-EGG2"
-    ) in errors["Sample_ID"]
-
-
-def test_duplicate_name():
-    """
-    Check for duplcicated sample names
-    """
-    assert (
-        "Duplicate Sample Name present: 2107383-21236Z0079-BM-MPD-MYE-F-EGG2"
-    ) in errors["Sample_Name"]
+    assert ((
+        "Duplicate sample ID found in same lane and / or with same indices: "
+        "2107383-21236Z0079-BM-MPD-MYE-F-EGG2"
+    )) in errors["Sample_ID"]
