@@ -52,7 +52,7 @@ class validators():
         """
         header_errors = []
 
-        # regex to match adapter lines as they can be Adapter, Adap6ter1,
+        # regex to match adapter lines as they can be Adapter, Adapter1,
         # AdapterRead1 etc.
         adapter_regex = re.compile("^adapter(read)?[1,2]?", re.IGNORECASE)
 
@@ -73,7 +73,7 @@ class validators():
                     )
 
             if line.startswith('Experiment'):
-                # check experiment nasme set
+                # check experiment name set
                 if not line.split(',')[1]:
                     header_errors.append(
                         f'Error in line {num + 1}: no experiment name given'
@@ -252,8 +252,14 @@ class validators():
         columns = self.samplesheet_body.columns.tolist()
 
         # find index columns
-        index1 = [x for x in columns if x.strip('\n') == 'index' or x == 'Index']
-        index2 = [x for x in columns if x.strip('\n') == 'index2' or x == 'Index2']
+        index1 = [
+            x for x in columns if x.strip('\n') == 'index' or
+            x.strip('\n') == 'Index'
+        ]
+        index2 = [
+            x for x in columns if x.strip('\n') == 'index2' or
+            x.strip('\n') == 'Index2'
+        ]
 
         if index1:
             self.check_index(index1[0])
