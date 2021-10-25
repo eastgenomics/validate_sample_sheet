@@ -15,7 +15,7 @@ Currently validated fields include:
 
 - <b>Sample_ID</b>
     - Check for presence of any non-alphanumeric characters, underscores or dashes.
-    - Check for duplicates in sheet.
+    - Check for duplicates in sheet where lane OR index are not unique.
     - Check for missing sample ID.
     - (optional) use given regex patterns to validate sample ID against. Useful for where strict sample ID naming required that may break downstream analysis.
 
@@ -23,7 +23,6 @@ Currently validated fields include:
 
 - <b>Sample_Name</b>
     - Check for presence of any non-alphanumeric characters, underscores or dashes.
-    - Check for duplicates in sheet.
     - Check for missing sample name.
 
 
